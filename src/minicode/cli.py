@@ -11,7 +11,7 @@ from .tools.registry import ToolRegistry, ToolResult, echo_tool
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the command-line parser."""
+    """构造包含版本信息和 run 子命令的 CLI 解析器。"""
     parser = argparse.ArgumentParser(prog="minicode", description="MiniCode coding agent")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    """Run the MiniCode command-line interface."""
+    """解析命令并组装 Provider、工具注册表和 Agent Loop。"""
     args = build_parser().parse_args()
     if args.command == "run":
         adapter = "fake" if args.provider == "fake" else "openai-compatible"

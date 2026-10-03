@@ -9,14 +9,18 @@ from ..tools.registry import ToolRegistry, ToolResult
 
 
 class AgentLoop:
+    """顺序执行模型响应、工具调用和工具结果回传的运行时。"""
+
     def __init__(
         self, provider: LLMProvider, tools: ToolRegistry | None = None, max_turns: int = 8
     ) -> None:
+        """创建 Loop，并设置可替换的 Provider、工具注册表和轮次上限。"""
         self.provider, self.tools, self.max_turns = provider, tools or ToolRegistry(), max_turns
 
     async def run(
         self, prompt: str, model: str = "gpt6.1sol", reasoning_effort: str | None = None
     ) -> AsyncIterator[LLMEvent | ToolResult]:
+        """运行一次任务，直到模型结束、取消或达到最大轮次。"""
         messages = [Message("user", prompt)]
         for _ in range(self.max_turns):
             request = LLMRequest(
@@ -42,6 +46,8 @@ class AgentLoop:
 def run_sync(
     loop: AgentLoop, prompt: str, model: str, reasoning_effort: str | None = None
 ) -> list[LLMEvent | ToolResult]:
+    """在同步调用方中执行 Agent Loop 并收集全部事件。"""
+
     async def collect() -> list[LLMEvent | ToolResult]:
         return [event async for event in loop.run(prompt, model, reasoning_effort)]
 
