@@ -1,7 +1,8 @@
 """Tool protocol and deterministic registry."""
 
+import inspect
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,7 +25,7 @@ class Tool:
     name: str
     description: str
     parameters: dict[str, Any]
-    handler: Callable[[dict[str, Any]], str]
+    handler: Callable[[dict[str, Any]], str | Awaitable[str]]
 
 
 class ToolRegistry:
@@ -60,8 +61,23 @@ class ToolRegistry:
         if tool is None:
             return ToolResult(call.id, f"unknown tool: {call.name}", True)
         try:
-            return ToolResult(call.id, tool.handler(call.arguments))
+            result = tool.handler(call.arguments)
+            if inspect.isawaitable(result):
+                raise RuntimeError("async tool requires execute_async")
+            return ToolResult(call.id, result)
         except Exception as exc:  # tools must return errors to the loop
+            return ToolResult(call.id, str(exc), True)
+
+    async def execute_async(self, call: ToolCall) -> ToolResult:
+        """执行同步或异步工具，并统一转换为 ToolResult。"""
+        tool = self._tools.get(call.name)
+        if tool is None:
+            return ToolResult(call.id, f"unknown tool: {call.name}", True)
+        try:
+            result = tool.handler(call.arguments)
+            content = await result if inspect.isawaitable(result) else result
+            return ToolResult(call.id, str(content))
+        except Exception as exc:
             return ToolResult(call.id, str(exc), True)
 
 

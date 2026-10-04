@@ -18,7 +18,7 @@ class AgentLoop:
         self.provider, self.tools, self.max_turns = provider, tools or ToolRegistry(), max_turns
 
     async def run(
-        self, prompt: str, model: str = "gpt6.1sol", reasoning_effort: str | None = None
+        self, prompt: str, model: str = "gpt-6-sol", reasoning_effort: str | None = None
     ) -> AsyncIterator[LLMEvent | ToolResult]:
         """运行一次任务，直到模型结束、取消或达到最大轮次。"""
         messages = [Message("user", prompt)]
@@ -37,7 +37,7 @@ class AgentLoop:
             if not calls:
                 return
             for call in calls:
-                result = self.tools.execute(call)
+                result = await self.tools.execute_async(call)
                 messages.append(Message("tool", result.content, tool_call_id=result.tool_call_id))
                 yield result
         yield LLMEvent("provider_error", error="maximum turns exceeded")

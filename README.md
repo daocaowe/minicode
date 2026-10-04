@@ -47,3 +47,21 @@ ruff check src tests
 ruff format --check src tests
 pyright
 ~~~
+
+## 指定项目和 Docker 沙盒
+
+app.py 只是测试示例。运行时通过 --workspace 或 --cwd 指定你本机已有的项目文件夹，Agent 会在这个目录中读取和修改文件：
+
+~~~powershell
+minicode run --workspace "D:\code\my-project" "读取 app.py，修复 bug，然后运行测试"
+~~~
+
+单个文件不需要上传到服务器；把它所在的文件夹作为工作区即可。文件工具只允许访问工作区内路径。
+
+如果本机 Docker 已启动，可以让 Shell 命令进入隔离容器：
+
+~~~powershell
+minicode run --workspace "D:\code\my-project" --sandbox docker "运行 pytest 并修复失败测试"
+~~~
+
+Docker 模式使用 python:3.12-slim，把项目挂载为 /workspace，默认关闭容器网络；修改会写回宿主项目目录。可用 --docker-image 更换镜像。

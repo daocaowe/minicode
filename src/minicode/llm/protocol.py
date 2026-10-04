@@ -126,6 +126,7 @@ class OpenAICompatibleAdapter:
                     timeout=self.config.timeout_seconds,
                 )
             )
+            tool_chunks: dict[int, dict[str, str]] = {}
             for raw in response:
                 if cancel and cancel.is_set():
                     return
@@ -140,6 +141,26 @@ class OpenAICompatibleAdapter:
                 delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
                 if delta.get("content"):
                     yield LLMEvent("text_delta", text=delta["content"])
+                for item in delta.get("tool_calls") or []:
+                    index = int(item.get("index", 0))
+                    function = item.get("function") or {}
+                    state = tool_chunks.setdefault(index, {"id": "", "name": "", "arguments": ""})
+                    state["id"] += str(item.get("id") or "")
+                    state["name"] += str(function.get("name") or "")
+                    state["arguments"] += str(function.get("arguments") or "")
+                    if state["arguments"].endswith("}"):
+                        try:
+                            arguments = json.loads(state["arguments"])
+                        except json.JSONDecodeError:
+                            arguments = None
+                        if isinstance(arguments, dict):
+                            from ..domain.messages import ToolCall
+
+                            yield LLMEvent(
+                                "tool_call_end",
+                                tool_call=ToolCall(state["id"], state["name"], arguments),
+                            )
+                            del tool_chunks[index]
                 if chunk.get("usage"):
                     yield LLMEvent("usage", usage=chunk["usage"])
                 if (chunk.get("choices") or [{}])[0].get("finish_reason"):
